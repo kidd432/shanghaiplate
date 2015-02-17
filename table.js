@@ -1,30 +1,27 @@
-/**
- * Created by nake12 on 2015/2/12.
- */
 
-var margin = {top: 20, right: 20, bottom: 30, left: 40},
+var margin = {top: 20, right: 20, bottom: 30, left: 50},
     width = 960 - margin.left - margin.right,
     height = 500 - margin.top - margin.bottom;
 
-var x0 = d3.scale.ordinal()
-    .rangeRoundBands([0, width], .1);
+var parseDate = d3.time.format("%y-%b").parse;
 
-var x1 = d3.scale.ordinal();
+var x = d3.time.scale()
+    .range([0, width]);
 
 var y = d3.scale.linear()
     .range([height, 0]);
 
-var color = d3.scale.ordinal()
-    .range(["#98abc5", "#8a89a6", "#7b6888"]);
-
 var xAxis = d3.svg.axis()
-    .scale(x0)
+    .scale(x)
     .orient("bottom");
 
 var yAxis = d3.svg.axis()
     .scale(y)
-    .orient("left")
-  //  .tickFormat(d3.format(".2s"));
+    .orient("left");
+
+var line = d3.svg.line()
+    .x(function(d) { return x(d.date); })
+    .y(function(d) { return y(d.close); });
 
 var svg = d3.select("body").append("svg")
     .attr("width", width + margin.left + margin.right)
@@ -32,32 +29,15 @@ var svg = d3.select("body").append("svg")
     .append("g")
     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-d3.csv("data.csv",function(error,data){
-    if(error){
-        console.log(error);
-    }
-  //  console.log(data);
-    //var storedata = d3.csv.format(data);
-    //console.log(storedata)
-    var SubNames = d3.keys(data[0]).filter(function(key) { return key !== "date"; });
-
-    data.forEach(function (d) {
-        d.plateprice = SubNames.map(function (name) { return { name: name, value: +d[name] }; });
-        //alert("hi --- " + JSON.stringify(d.Flights));
-        console.log(d.plateprice);
+d3.csv("data2.csv", function(error, data) {
+    data.forEach(function(d) {
+        d.date = parseDate(d.date);
+        d.close = +d.close;
     });
-    x0.domain(data.map(function (d) { return d.date ; }));
-//alert(JSON.stringify(data.map(function (d) { return d.MMM + " " + d.YEAR; })));
+    console.log(data);
+    x.domain(d3.extent(data, function(d) { return d.date; }));
+    y.domain(d3.extent(data, function(d) { return d.close; }));
 
-//                //x1.domain(seriesNames).rangeRoundBands([0, x0.rangeBand()]);
-    x1.domain(SubNames).rangeRoundBands([0, x0.rangeBand()]);
-
-//                //y.domain([0, d3.max(data, function (d) { return d3.max(d.ages, function (d) { return d.value; }); })]);
-//                // Make the y domain go from 0 up to the max of d.Total (Total flights)
-//                y.domain([0, d3.max(data, function (d) { return d3.max(d.Total); })]);
-    y.domain([0, (10 + d3.max(data, function (d) { return d3.max(d.plateprice, function (d) { return d.value; }); }))]);
-
-// The axis business
     svg.append("g")
         .attr("class", "x axis")
         .attr("transform", "translate(0," + height + ")")
@@ -71,57 +51,10 @@ d3.csv("data.csv",function(error,data){
         .attr("y", 6)
         .attr("dy", ".71em")
         .style("text-anchor", "end")
-     //   .text("# of Plate");
+        .text("Price ($)");
 
-
-// From this point to...
-
-//var state = svg.selectAll(".state")
-//    .data(data)
-//.enter().append("g")
-//    .attr("class", "g")
-//    .attr("transform", function (d) { return "translate(" + x0(d.State) + ",0)"; });
-
-    var state = svg.selectAll(".state")
-        .data(data)
-        .enter().append("g")
-        .attr("class", "g")
-        .attr("transform", function (d) { return "translate(" + x0(d.date) + ",0)"; });
-
-//alert(JSON.stringify(d.Flights[0]));
-    state.selectAll("rect")
-        .data(function (d) { return d.plateprice; })
-        .enter().append("rect")
-        .attr("width", x1.rangeBand())
-        .attr("x", function (d) { return x1(d.name); })
-        .attr("y", function (d) { return y(d.value); })
-        .attr("height", function (d) { return height - y(d.value); })
-        .style("fill", function (d) { return color(d.name); });
-
-
-    var legend = svg.selectAll(".legend")
-        .data(SubNames.slice().reverse())
-        .enter().append("g")
-        .attr("class", "legend")
-        .attr("transform", function (d, i) { return "translate(0," + i * 20 + ")"; });
-
-    legend.append("rect")
-        .attr("x", width - 18)
-        .attr("width", 18)
-        .attr("height", 18)
-        .style("fill", color);
-
-    legend.append("text")
-        .attr("x", width - 24)
-        .attr("y", 9)
-        .attr("dy", ".35em")
-        .style("text-anchor", "end")
-        .text(function (d) { return d; })
-        .on("click", function (d) {
-            alert(d);
-        });
-            //state.selectAll("rect")
-            //.update()
-
-
+    svg.append("path")
+        .datum(data)
+        .attr("class", "line")
+        .attr("d", line);
 });
